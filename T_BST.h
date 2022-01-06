@@ -76,6 +76,12 @@ private:
     [[maybe_unused]] double correlationCoefficient(t_treeNode<T> *root_, t_treeNode<T> *node);
     [[maybe_unused]] double zMultiplier(double alpha);
     [[maybe_unused]] pair<double, double> confidenceInterval(t_treeNode<T> *node, double alpha);
+
+    [[maybe_unused]] bool isBalanced(t_treeNode<T> *node);
+    [[maybe_unused]] bool isPresent(t_treeNode<T> *node, T data);
+    [[maybe_unused]] bool isBST(t_treeNode<T> *node);
+
+
     // private destroy methods
     [[maybe_unused]] void destroyTree(t_treeNode<T> *node);
 public:
@@ -142,6 +148,9 @@ public:
     [[maybe_unused]] pair<double, double> confidenceInterval(double confidence);
     // public boolean methods
     [[maybe_unused]] bool isEmpty();
+    [[maybe_unused]] bool isBalanced();
+    [[maybe_unused]] bool isPresent(T data);
+    [[maybe_unused]] bool isBST();
     // public tree filler methods
     [[maybe_unused]] void fillTreeFromFile([[maybe_unused]] const string& filename,
                                            [[maybe_unused]] char delimiter);
@@ -250,15 +259,24 @@ template <typename T>
     }
     queue<t_treeNode<T> *> q;
     q.push(node);
+    q.push(nullptr);
     while (!q.empty()) {
         t_treeNode<T> *temp = q.front();
-        q.pop();
-        cout << temp->data << " ";
-        if (temp->left != nullptr) {
-            q.push(temp->left);
-        }
-        if (temp->right != nullptr) {
-            q.push(temp->right);
+        if (temp == nullptr) {
+            cout << endl;
+            q.pop();
+            if (!q.empty()) {
+                q.push(nullptr);
+            }
+        } else {
+            q.pop();
+            cout << temp->data << " ";
+            if (temp->left != nullptr) {
+                q.push(temp->left);
+            }
+            if (temp->right != nullptr) {
+                q.push(temp->right);
+            }
         }
     }
 }
@@ -876,6 +894,48 @@ template <typename T>
     return make_pair(lowerBound, upperBound);
 }
 
+template<class T>
+bool t_BST<T>::isBalanced(t_treeNode<T> *node) {
+    if (node == nullptr) {
+        return true;
+    }
+    int leftHeight = getHeight(node->left);
+    int rightHeight = getHeight(node->right);
+    if (abs(leftHeight - rightHeight) <= 1 && isBalanced(node->left) && isBalanced(node->right)) {
+        return true;
+    }
+    return false;
+}
+template<class T>
+[[maybe_unused]] bool t_BST<T>::isPresent(t_treeNode<T> *node, T data) {
+    // check if the data is present in the tree
+    if (node == nullptr) {
+        return false;
+    }
+    if (node->data == data) {
+        return true;
+    }
+    if (node->data > data) {
+        return isPresent(node->left, data);
+    } else {
+        return isPresent(node->right, data);
+    }
+}
+
+template<class T>
+bool t_BST<T>::isBST(t_treeNode<T> *node) {
+    if (node == nullptr) {
+        return true;
+    }
+    if (node->left != nullptr && node->left->data > node->data) {
+        return false;
+    }
+    if (node->right != nullptr && node->right->data < node->data) {
+        return false;
+    }
+    return isBST(node->left) && isBST(node->right);
+}
+
 template <typename T>
 [[maybe_unused]] int t_BST<T>::keyCountUtil(t_treeNode<T>* root_, T key) {
     if (root_ == nullptr) {
@@ -1318,6 +1378,22 @@ template <typename T>
 [[maybe_unused]] bool t_BST<T>::isEmpty() {
     return root == nullptr;
 }
+
+template<class T>
+[[maybe_unused]] bool t_BST<T>::isPresent(T data) {
+    return isPresent(root, data);
+}
+
+template<class T>
+[[maybe_unused]]  bool t_BST<T>::isBalanced() {
+    return isBalanced(root);
+}
+
+template<class T>
+[[maybe_unused]]  bool t_BST<T>::isBST() {
+    return isBST(root);
+}
+
 template <typename T>
 [[maybe_unused]] void t_BST<T>::fillTreeFromFile([[maybe_unused]] const string& filename,
                                                  [[maybe_unused]] char delimiter) {
@@ -1344,4 +1420,5 @@ template <typename T>
 t_BST<T>::~t_BST() {
     destroyTree(root);
 }
+
 
