@@ -40,7 +40,10 @@ private:
     [[maybe_unused]] void postOrder(t_treeNode<T> *node);
     [[maybe_unused]] void levelOrder(t_treeNode<T> *node);
     [[maybe_unused]] void print2DUtil(t_treeNode<T> *root_, int space);
+    [[maybe_unused]] void printNodesAtDistanceK(t_treeNode<T> root_, int k);
+    [[maybe_unused]] void verticalOrder(t_treeNode<T> *node, map<int, vector<T>> &m, int level);
     // private search methods
+    [[maybe_unused]] t_treeNode<T> *findParent(t_treeNode<T> *root_, T data);
     [[maybe_unused]] t_treeNode<T> *findSuccessor(t_treeNode<T> *node);
     [[maybe_unused]] t_treeNode<T> *findPredecessor(t_treeNode<T> *node);
     [[maybe_unused]] t_treeNode<T> *find(t_treeNode<T> *node, T data);
@@ -106,7 +109,9 @@ public:
     [[maybe_unused]] t_treeNode<T> *findMin();
     [[maybe_unused]] t_treeNode<T> *findParent(T data);
     [[maybe_unused]] t_treeNode<T> *findSuccessor(T data);
+    [[maybe_unused]] t_treeNode<T> *findInorderSuccessor(t_treeNode<T> *node);
     [[maybe_unused]] t_treeNode<T> *findPredecessor(T data);
+    [[maybe_unused]] t_treeNode<T> *findInorderPredecessor(t_treeNode<T> *node);
     T max();
     T min();
     // public print methods
@@ -116,6 +121,8 @@ public:
     [[maybe_unused]] void postOrder();
     [[maybe_unused]] void levelOrder();
     [[maybe_unused]] void print2D();
+    [[maybe_unused]] void printNodesAtDistanceK(int k);
+    [[maybe_unused]] void verticalOrder();
     // public getter methods
     [[maybe_unused]] t_treeNode<T> *getRoot();
     [[maybe_unused]] int getSize();
@@ -158,8 +165,11 @@ public:
     [[maybe_unused]] void destroy();
     ~t_BST();
 
-};
+}; // ________________________end of class t_BST________________________________
 #endif //STATBST_T_BST_H
+
+// _________________________method definitions__________________________________
+// ___________________________private methods___________________________________
 template <typename T>
 [[maybe_unused]] void t_BST<T>::insert(t_treeNode<T> *&root_, t_treeNode<T> *&newNode) {
     if (root_ == nullptr) {
@@ -296,6 +306,49 @@ template <typename T>
     print2DUtil(root_->left, space);
 }
 
+template<class T>
+void t_BST<T>::printNodesAtDistanceK(t_treeNode<T> root_, int k) {
+    if (root_ == nullptr) {
+        return;
+    }
+    if (k == 0) {
+        cout << root_->data << " ";
+    }
+    printNodesAtDistanceK(root_->left, k - 1);
+    printNodesAtDistanceK(root_->right, k - 1);
+}
+
+template<class T>
+void t_BST<T>::verticalOrder(t_treeNode<T> *node, map<int, vector<T>> &m, int level) {
+    if (node == nullptr) {
+        return;
+    }
+    m[level].push_back(node->data);
+    verticalOrder(node->left, m, level - 1);
+    verticalOrder(node->right, m, level + 1);
+}
+
+template<class T>
+t_treeNode<T> *t_BST<T>::findParent(t_treeNode<T> *root_, T data) {
+    if (root_ == nullptr) {
+        return nullptr;
+    }
+    if (root_->data == data) {
+        return nullptr;
+    }
+    if (root_->left != nullptr && root_->left->data == data) {
+        return root_;
+    }
+    if (root_->right != nullptr && root_->right->data == data) {
+        return root_;
+    }
+    if (data < root_->data) {
+        return findParent(root_->left, data);
+    } else {
+        return findParent(root_->right, data);
+    }
+}
+
 
 template <typename T>
 [[maybe_unused]] t_treeNode<T> *t_BST<T>::findSuccessor(t_treeNode<T> *node) {
@@ -395,9 +448,10 @@ template <typename T>
     if (node == nullptr) {
         return nullptr;
     }
-    if (data == node->data) {
+    if (node->data == data) {
         return node;
-    } else if (data < node->data) {
+    }
+    if (data < node->data) {
         return find(node->left, data);
     } else {
         return find(node->right, data);
@@ -924,16 +978,25 @@ template<class T>
 
 template<class T>
 bool t_BST<T>::isBST(t_treeNode<T> *node) {
+    // use an iterative approach to check if the tree is a BST
     if (node == nullptr) {
         return true;
     }
-    if (node->left != nullptr && node->left->data > node->data) {
-        return false;
+    stack<t_treeNode<T> *> s;
+    t_treeNode<T> *current = node;
+    while (current != nullptr || !s.empty()) {
+        while (current != nullptr) {
+            s.push(current);
+            current = current->left;
+        }
+        current = s.top();
+        s.pop();
+        if (current->right != nullptr && current->data > current->right->data) {
+            return false;
+        }
+        current = current->right;
     }
-    if (node->right != nullptr && node->right->data < node->data) {
-        return false;
-    }
-    return isBST(node->left) && isBST(node->right);
+    return true;
 }
 
 template <typename T>
@@ -950,7 +1013,7 @@ template <typename T>
     return count;
 }
 
-//____________________________public functions__________________________________
+//____________________________public methods__________________________________
 // constructor
 template <typename T>
 [[maybe_unused]] t_BST<T>::t_BST() {
@@ -1003,16 +1066,18 @@ template<class T>
     size = 0;
     this->fillTreeFromFile(fileName, delimiter);
 }
-
+// constructor to fill the array with random data int the range of min to max
 template<class T>
 [[maybe_unused]] t_BST<T>::t_BST(int totalElements, T min, T max) {
     // fill the tree with random numbers in the range [min, max]
     root = nullptr;
     size = 0;
-    // seed the random number generator from the system clock and random library
-    srandom(time(nullptr));
+    // use the random header file to seed a good random number generator
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> dis(min, max);
     for (int i = 0; i < totalElements; i++) {
-        insert(random() % (max - min + 1) + min);
+        insert(dis(gen));
     }
 }
 /**
@@ -1075,14 +1140,7 @@ template <typename T>
 */
 template<class T>
 [[maybe_unused]] t_treeNode<T> *t_BST<T>::findParent(T data) {
-    t_treeNode<T> *node = find(data);
-    if (node == nullptr) {
-        return nullptr;
-    }
-    if (node->parent == nullptr) {
-        return nullptr;
-    }
-    return node->parent;
+    return findParent(root, data);
 }
 /**
  * @brief finds the successor of a node, or the leftmost node of the right subtree
@@ -1106,6 +1164,38 @@ template<class T>
     return node;
 }
 /**
+ * @brief finds the next value greater then the given data's value taking in
+ *  account that there are repeated values in the tree
+ * @tparam T  the type of the data
+ * @param data  the data to find the next value of
+ * @return   the next node with the next closest value greater then the given
+ *  data's value
+ */
+template<class T>
+t_treeNode<T> *t_BST<T>::findInorderSuccessor(t_treeNode<T> *node) {
+    // finds the next value greater than the given data skipping repeated values
+    if (node->right != nullptr) {
+        t_treeNode<T> *temp = node->right;
+        while (temp->left != nullptr) {
+            temp = temp->left;
+        }
+        return temp;
+    }
+    t_treeNode<T> *temp = root;
+    t_treeNode<T> *succ = nullptr;
+    while (temp != nullptr) {
+        if (temp->data > node->data) {
+            succ = temp;
+            temp = temp->left;
+        } else if (temp->data < node->data) {
+            temp = temp->right;
+        } else {
+            break;
+        }
+    }
+    return succ;
+}
+/**
  * @brief finds the predecessor of a node, or the right most child of the
  * left subtree of the node
  * @param data  the data of the node to find the predecessor of
@@ -1127,6 +1217,32 @@ template<class T>
     }
     return parent;
 }
+
+template<class T>
+t_treeNode<T> *t_BST<T>::findInorderPredecessor(t_treeNode<T> *node) {
+    // finds the next value greater than the given data skipping repeated values
+    if (node->left != nullptr) {
+        t_treeNode<T> *temp = node->left;
+        while (temp->right != nullptr) {
+            temp = temp->right;
+        }
+        return temp;
+    }
+    t_treeNode<T> *temp = findParent(node->data);
+    t_treeNode<T> pred = nullptr;
+    while (temp != nullptr) {
+        if (temp->data < node->data) {
+            pred = temp;
+            temp = temp->right;
+        } else if (temp->data > node->data) {
+            temp = temp->left;
+        } else {
+            break;
+        }
+    }
+    return pred;
+}
+
 /**
  * @brief counts how many times a key appears in the tree
  * @param key  the key to count
@@ -1191,6 +1307,23 @@ template <typename T>
 template <typename T>
 [[maybe_unused]] void t_BST<T>::print2D() {
     print2DUtil(root, 0);
+}
+
+template<class T>
+void t_BST<T>::printNodesAtDistanceK(int k) {
+    printNodesAtDistanceK(root, k);
+}
+
+template<class T>
+void t_BST<T>::verticalOrder() {
+    map<int, vector<T>> m;
+    verticalOrder(root, m, 0);
+    for (auto &i : m) {
+        for (auto &j : i.second) {
+            cout << j << " ";
+        }
+        cout << endl;
+    }
 }
 
 // getters
@@ -1420,5 +1553,9 @@ template <typename T>
 t_BST<T>::~t_BST() {
     destroyTree(root);
 }
+
+
+
+
 
 
